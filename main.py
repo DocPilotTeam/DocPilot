@@ -13,7 +13,7 @@ class RepoModal(BaseModel):
     AuthToken:str|None=None
     ProjName:str
 
-
+##CLONE OR PULL
 @app.post("/getRepo")
 def fetchRepo(repository:RepoModal):
     basePath="UserRepos"
@@ -42,7 +42,7 @@ def fetchRepo(repository:RepoModal):
     return {"message":"project cloned successfull"}
 
 
-
+##CODE WATCHER
 @app.get("/getChangedFiles")
 def codeWatcher(projUrl:str):
     repo=Repo(projUrl)
