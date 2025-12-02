@@ -52,7 +52,7 @@ Diagram preview
 Workflow logs
 Agent health status
 
-📂 Project Structure
+📂 Project Structure.
 docpilot-agent/
 │
 ├── backend/
