@@ -1,3 +1,4 @@
+
 DocPilot — Autonomous Project Documentation & Diagram Generator
 
 DocPilot is an Agentic AI-powered system that automatically analyzes codebases, generates documentation, builds knowledge graphs, and produces architectural diagrams—all triggered seamlessly from GitHub commits.
@@ -53,36 +54,9 @@ Workflow logs
 Agent health status
 
 📂 Project Structure.
-docpilot-agent/
-│
-├── backend/
-│   ├── api/               → FastAPI services (webhooks, triggers, project mgmt)
-│   ├── agents/
-│   │    ├── watcher/      → Code watcher agent
-│   │    ├── parser/       → AST parsers (Java, JS/TS, SQL)
-│   │    ├── kg-builder/   → Knowledge graph builder
-│   │    ├── docgen/       → Documentation generator
-│   │    ├── diagramgen/   → Diagram/flowchart generator
-│   │    └── publisher/    → Git automation (PR creation)
-│   ├── models/            → Pydantic + DB schemas
-│   ├── db/                → PostgreSQL + Neo4j config
-│   ├── utils/             → Git utilities, LLM helpers, parsers
-│   └── main.py            → FastAPI entrypoint
-│
-├── services/
-│   ├── llm-engine/        → Prompt orchestration / agent pipeline
-│   └── ast-services/      → JavaParser + Babel parser integration
-│
-├── frontend-dashboard/
-│   ├── react-app/         → Dashboard UI
-│   └── components/        → Docs viewer, diagrams, logs
-│
-├── docs/                  → Auto-generated documentation
-│
-├── .github/workflows/
-│   └── autodoc.yml        → GitHub Actions CI pipeline
-│
-└── run_autodoc.py         → GitHub Actions entry script
+
+<img width="593" height="688" alt="image" src="https://github.com/user-attachments/assets/dbbaaa08-412a-482a-bb6e-cb0e4f1e2f51" />
+
 
 ⚙️ How It Works
 
