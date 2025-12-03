@@ -2,7 +2,7 @@ from fastapi import FastAPI,HTTPException
 from pydantic import BaseModel
 import os
 from git import Repo
-from database.db import user_repo_db
+from db.data import user_repo_db
 
 
 app=FastAPI()
@@ -24,6 +24,7 @@ def fetchRepo(repository:RepoModal):
         "local_path": path,
         "branch": repository.BranchName
         }
+    print(user_repo_db)
     
     try:
         if not os.path.exists(path):
