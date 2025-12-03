@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import os
 from git import Repo
 from db.data import user_repo_db
+from api.webhook import router as web_hook
 
 
 app=FastAPI()
@@ -51,3 +52,6 @@ def codeWatcher(projUrl:str):
     final_list=files.split("\n")
     print(final_list)
     return {"changed_Files":final_list}
+
+
+app.include_router(web_hook)
