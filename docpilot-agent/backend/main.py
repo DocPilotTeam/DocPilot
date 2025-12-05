@@ -5,6 +5,7 @@ from git import Repo
 from db.data import user_repo_db
 from api.webhook import router as web_hook
 from api.api_routes import router as parser_api_router
+from agents.kg_builder.openAiKG import router as cypher_test
 
 
 app=FastAPI()
@@ -60,3 +61,4 @@ app.include_router(web_hook)
 ##CODE PARSER
 # Register the API routes
 app.include_router(parser_api_router, prefix="/api")
+app.include_router(cypher_test,prefix="/api")
