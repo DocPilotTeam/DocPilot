@@ -3,10 +3,14 @@ import os
 from api.api_routes import parse_repo as ast_parsed_data,RepoNameRequest
 import json
 from fastapi import APIRouter
+from db.neo4j_connect import driver
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router=APIRouter()
 apiKey=os.getenv("gemini_api_key")
-client=genai.Client(api_key="AIzaSyCp_2htDDWJk-3ZtLrcyqp64Xy5FabiFhY")
+client=genai.Client(api_key=apiKey)
 
 # projectName="interviewAI"
 
@@ -52,5 +56,9 @@ AST_JSON = {json.dumps(ast_json)}
      )
      cypher_text=cypher_text = response.candidates[0].content.parts[0].text.strip()
      print(cypher_text)
+     with driver.session() as session:
+          for query in cypher_text.split("\n"):
+               if query:
+                    session.run(query=query)
      return {"cypher": cypher_text}
 

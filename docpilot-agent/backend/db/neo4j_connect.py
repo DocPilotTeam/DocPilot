@@ -17,6 +17,6 @@ if not uri or not password:
 
 driver=GraphDatabase.driver(uri,auth=("neo4j",password))
 
-with driver:
-    driver.verify_connectivity()
-    print("Connection established")
+
+driver.verify_connectivity()
+print("Connection established")
