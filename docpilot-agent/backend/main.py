@@ -6,6 +6,7 @@ from db.data import user_repo_db
 from api.webhook import router as web_hook
 from api.api_routes import router as parser_api_router
 from agents.kg_builder.openAiKG import router as cypher_test
+from agents.watcher.CodeWatcher import router as watch_router
 
 
 app=FastAPI()
@@ -47,16 +48,10 @@ def fetchRepo(repository:RepoModal):
 
 
 ##CODE WATCHER
-@app.get("/getChangedFiles")
-def codeWatcher(projUrl:str):
-    repo=Repo(projUrl)
-    files=repo.git.diff("--name-only","HEAD~1","HEAD")
-    final_list=files.split("\n")
-    print(final_list)
-    return {"changed_Files":final_list}
+app.include_router(watch_router,prefix="/api")
 
-
-app.include_router(web_hook)
+##WebHook
+app.include_router(web_hook,prefix="/api")
 
 ##CODE PARSER
 # Register the API routes
