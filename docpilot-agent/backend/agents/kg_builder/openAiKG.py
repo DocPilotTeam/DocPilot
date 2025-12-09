@@ -30,27 +30,29 @@ def showCyphertext(request:RepoNameRequest):
      system_prompt = f"""
 You are an expert in Neo4j Cypher generation.
 
-Your job:
-Convert the AST JSON input into Neo4j Cypher queries following the rules below.
+Your task is to convert the provided AST JSON into Neo4j Cypher queries using the rules below.
 
 RULES:
-1. Only output Cypher queries. No explanation, no markdown, no comments.
+1. Output only Cypher queries — no explanations, no markdown, no comments.
 2. Use ONLY MERGE statements. Never use CREATE.
-3. Always include project name in every node and relationship.
-4. For each file, create a (:File) node.
-5. For each class, create a (:Class) node with its filePath and project.
-6. For each method, create a (:Method) node with name, parentClass, filePath, and project.
-7. Relationships must use:
-     (File)-[:CONTAINS_CLASS]->(Class)
-     (File)-[:CONTAINS_METHOD]->(Method)
-     (Class)-[:HAS_METHOD]->(Method)
-     (Method)-[:CALLS]->(Method)
-8. Each Cypher statement must be separated by a newline.
-9. Do NOT wrap the output, do NOT add any commentary. Pure Cypher only.
+3. Every node MUST include a 'project' property set to the project name.
+4. Every relationship MUST include a 'project' property set to the project name.
+5. For each file, generate a (:File) node with filePath and project.
+6. For each class, generate a (:Class) node with className, filePath, and project.
+7. For each method, generate a (:Method) node with methodName, parentClass, filePath, and project.
+8. Use ONLY these relationships (each must also include {{project: '{projectName}'}}):
+     (File)-[:CONTAINS_CLASS {{project: '{projectName}'}}]->(Class)
+     (File)-[:CONTAINS_METHOD {{project: '{projectName}'}}]->(Method)
+     (Class)-[:HAS_METHOD {{project: '{projectName}'}}]->(Method)
+     (Method)-[:CALLS {{project: '{projectName}'}}]->(Method)
+9. Every Cypher statement must be separated by a newline.
+10. Do NOT wrap the output. Do NOT add any commentary. Output pure Cypher only.
 
 PROJECT = {projectName}
 AST_JSON = {json.dumps(ast_json)}
 """
+
+
      response=client.models.generate_content(
      model="gemini-2.5-flash", contents=system_prompt
      )
