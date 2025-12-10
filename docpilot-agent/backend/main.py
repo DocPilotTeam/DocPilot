@@ -9,6 +9,8 @@ from agents.kg_builder.openAiKG import router as cypher_test
 from db.repo_queries import insert_repo, get_repo_by_name
 from agents.parser.parser_manager import ParserManager
 
+from agents.watcher.CodeWatcher import router as watch_router
+from agents.kg_builder.Kg_reader import router as test_router
 
 app=FastAPI()
 
@@ -65,18 +67,14 @@ def fetchRepo(repository: RepoModal):
 
 
 ##CODE WATCHER
-@app.get("/getChangedFiles")
-def codeWatcher(projUrl:str):
-    repo=Repo(projUrl)
-    files=repo.git.diff("--name-only","HEAD~1","HEAD")
-    final_list=files.split("\n")
-    print(final_list)
-    return {"changed_Files":final_list}
+app.include_router(watch_router,prefix="/api")
 
-
-app.include_router(web_hook)
+##WebHook
+app.include_router(web_hook,prefix="/api")
 
 ##CODE PARSER
 # Register the API routes
 app.include_router(parser_api_router, prefix="/api")
 app.include_router(cypher_test,prefix="/api")
+
+app.include_router(test_router,prefix="/api")
