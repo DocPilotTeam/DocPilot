@@ -59,7 +59,7 @@ def fetchRepo(repository: RepoModal):
     }
     if not doesExists:
         print(f"[Memory] Saved {repository.ProjName} in user_repo_db")
-        return {"message": "Project cloned & stored locally successfully"}
+        return {"message": "Project cloned & stored in supabase successfully"}
     else:
         return {"message": "Project pulled & already exists in Supabase"}
 
