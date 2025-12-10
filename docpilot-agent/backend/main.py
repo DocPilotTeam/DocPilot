@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,APIRouter
 from pydantic import BaseModel
 import os
 from git import Repo
@@ -6,6 +6,8 @@ from db.data import user_repo_db
 from api.webhook import router as web_hook
 from api.api_routes import router as parser_api_router
 from agents.kg_builder.openAiKG import router as cypher_test
+from db.repo_queries import insert_repo, get_repo_by_name
+from agents.parser.parser_manager import ParserManager
 
 
 app=FastAPI()
@@ -18,32 +20,48 @@ class RepoModal(BaseModel):
 
 ##CLONE OR PULL
 @app.post("/getRepo")
-def fetchRepo(repository:RepoModal):
-    basePath="UserRepos"
-    os.makedirs(basePath,exist_ok=True)
-    path=os.path.join(basePath,repository.ProjName)
-    user_repo_db[repository.ProjName]={
-        "repo_url": repository.projUrl,
-        "local_path": path,
-        "branch": repository.BranchName
-        }
-    print(user_repo_db)
-    
+def fetchRepo(repository: RepoModal):
+    basePath = "UserRepos"
+    os.makedirs(basePath, exist_ok=True)
+    path = os.path.join(basePath, repository.ProjName)
+    # Check if repo already exists in DB
+    existing = get_repo_by_name(repository.ProjName)
+    # Clone or pull repo
     try:
         if not os.path.exists(path):
-            Repo.clone_from(repository.projUrl,path)
+            Repo.clone_from(repository.projUrl, path)
         else:
-            repo_obj=Repo(path)
-            repo_obj.git.reset('--hard')
-            repo_obj.git.clean('-fd')
+            repo_obj = Repo(path)
+            repo_obj.git.reset("--hard")
+            repo_obj.git.clean("-fd")
             repo_obj.remotes.origin.pull()
-            print(f"Repository Updated to the file==>{path}")
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Git operation failed{str(e)}"
+        raise HTTPException(status_code=400, detail=f"Git operation failed: {str(e)}")
+    # Insert only if not exists
+    doesExists=False
+    if len(existing.data) == 0:
+        insert_repo(
+            proj_name=repository.ProjName,
+            repo_url=repository.projUrl,
+            branch=repository.BranchName,
+            auth_token=repository.AuthToken
         )
-    return {"message":"project cloned successfull"}
+    else:
+        print("Repo already exists in Supabase, skipping insert.")
+        doesExists=True
+
+    #Store in-memory for parser
+    user_repo_db[repository.ProjName] = {
+        "local_path": path,
+        "repo_url": repository.projUrl,
+        "branch": repository.BranchName,
+        "auth_token": repository.AuthToken
+    }
+    if not doesExists:
+        print(f"[Memory] Saved {repository.ProjName} in user_repo_db")
+        return {"message": "Project cloned & stored locally successfully"}
+    else:
+        return {"message": "Project pulled & already exists in Supabase"}
 
 
 ##CODE WATCHER
