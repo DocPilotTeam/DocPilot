@@ -38,7 +38,7 @@ def fetchRepo(repository: RepoModal):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Git operation failed: {str(e)}")
     # Insert only if not exists
-    doesExists=False
+    doesExists=False #flag to check if already exists in supabase
     if len(existing.data) == 0:
         insert_repo(
             proj_name=repository.ProjName,
