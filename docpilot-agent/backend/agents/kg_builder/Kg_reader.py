@@ -13,17 +13,18 @@ def getFile(project):
 
         return [record["f"] for record in result]
 
-def getClasses(project,file_path):
-    with driver.session() as session :
-        result=session.run(
-            """ MATCH (f:File {filePath: $file, project: $project})
-            MATCH (f)-[:CONTAINS_CLASS]->(c:Class)
+def getClasses(project, file_path):
+    with driver.session() as session:
+        result = session.run(
+            """
+            MATCH (c:Class {filePath: $file, project: $project})
             RETURN c
             """,
             file=file_path,
             project=project
         )
         return [record["c"] for record in result]
+
     
 def getMethods(project, class_name):
     with driver.session() as session:
@@ -32,10 +33,11 @@ def getMethods(project, class_name):
             MATCH (m:Method {parentClass: $class_name, project: $project})
             RETURN m
             """,
-            project=project,
-            class_name=class_name
+            class_name=class_name,
+            project=project
         )
         return [record["m"] for record in result]
+
 
 def get_method_calls(project, class_name, method_name):
     with driver.session() as session:
@@ -56,7 +58,36 @@ def get_method_calls(project, class_name, method_name):
     
 
 @router.get("/testingDataRetrive")
-def dataRetrive(projectName:str):
+def dataRetrive(projectName: str):
+
+    data = []
+
+    files = getFile(projectName)
+    data.extend(files)
+
+    for f in files:
+        file_path = f["filePath"]
+
+        classes = getClasses(projectName, file_path)
+        data.extend(classes)
+
+        for c in classes:
+            class_name = c["name"]
+
+            methods = getMethods(projectName, class_name)
+            data.extend(methods)
+
+            # Will be empty until CALLS relationships exist
+            for m in methods:
+                method_calls = get_method_calls(
+                    projectName,
+                    class_name,
+                    m["name"]
+                )
+                data.extend(method_calls)
+
+    return data
+
 
     # print("Classes:", getClasses(projectName, file_path))
     # print("Methods:", getMethods(projectName, class_name))
