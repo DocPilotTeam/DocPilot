@@ -28,28 +28,71 @@ def showCyphertext(request:RepoNameRequest):
      parsed_output=ast_parsed_data(reqObj)
      ast_json=parsed_output["data"]
 
-     system_prompt = f"""
-You are an expert in Neo4j Cypher generation.
+     system_prompt =  f"""
+You are an expert Neo4j Cypher generator.
 
-Your task is to convert the provided AST JSON into Neo4j Cypher queries using the rules below.
+Your task is to convert the provided AST JSON into Neo4j Cypher statements
+that strictly follow the schema and rules below.
 
-RULES:
-1. Output only Cypher queries — no explanations, no markdown, no comments.
-2. Use ONLY MERGE statements. Never use CREATE.
-3. Every node MUST include a 'project' property set to the project name.
-4. Every relationship MUST include a 'project' property set to the project name.
-5. For each file, generate a (:File) node with filePath and project.
-6. For each class, generate a (:Class) node with className, filePath, and project.
-7. For each method, generate a (:Method) node with methodName, parentClass, filePath, and project.
-8. Use ONLY these relationships (each must also include {{project: '{projectName}'}}):
-     (File)-[:CONTAINS_CLASS {{project: '{projectName}'}}]->(Class)
-     (File)-[:CONTAINS_METHOD {{project: '{projectName}'}}]->(Method)
-     (Class)-[:HAS_METHOD {{project: '{projectName}'}}]->(Method)
-     (Method)-[:CALLS {{project: '{projectName}'}}]->(Method)
-9. Every Cypher statement must be separated by a newline.
-10. Do NOT wrap the output. Do NOT add any commentary. Output pure Cypher only.
+IMPORTANT RULES (DO NOT VIOLATE):
+1. Output ONLY Cypher statements.
+2. No explanations, no markdown, no comments.
+3. Use ONLY MERGE statements. Never use CREATE.
+4. Every node MUST include a property: project = "{projectName}".
+5. Every relationship MUST include a property: project = "{projectName}".
+6. Do NOT invent property names. Use EXACT names only.
 
-PROJECT = {projectName}
+========================
+NODE SCHEMA (STRICT)
+========================
+
+(:File)
+  - filePath
+  - project
+
+(:Class)
+  - name
+  - filePath
+  - project
+
+(:Method)
+  - name
+  - parentClass
+  - filePath
+  - project
+
+========================
+RELATIONSHIPS (STRICT)
+========================
+
+(File)-[:CONTAINS_CLASS {{project: "{projectName}"}}]->(Class)
+(File)-[:CONTAINS_METHOD {{project: "{projectName}"}}]->(Method)
+(Class)-[:HAS_METHOD {{project: "{projectName}"}}]->(Method)
+(Method)-[:CALLS {{project: "{projectName}"}}]->(Method)
+
+========================
+GENERATION RULES
+========================
+
+- For each file in AST_JSON:
+  - MERGE a File node.
+- For each class inside the file:
+  - MERGE a Class node.
+  - MERGE (File)-[:CONTAINS_CLASS]->(Class).
+- For each method inside the class:
+  - MERGE a Method node.
+  - MERGE (Class)-[:HAS_METHOD]->(Method).
+  - MERGE (File)-[:CONTAINS_METHOD]->(Method).
+- For each method call:
+  - MERGE (callerMethod)-[:CALLS]->(calledMethod).
+
+OTHER RULES:
+- Every Cypher statement MUST be on a new line.
+- Do NOT output empty lines.
+- Do NOT output any text outside Cypher.
+- Do NOT wrap the output.
+
+PROJECT = "{projectName}"
 AST_JSON = {json.dumps(ast_json)}
 """
 
