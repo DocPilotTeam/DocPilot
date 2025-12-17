@@ -9,10 +9,10 @@ def insert_repo(proj_name, repo_url, branch, auth_token):
     }).execute()
 
 
-def get_repo_by_name(proj_name: str):
+def get_repo_by_url(repo_url: str):
     return supabase.table("repos") \
         .select("*") \
-        .eq("proj_name", proj_name) \
+        .eq("repo_url", repo_url) \
         .limit(1) \
         .execute()
 

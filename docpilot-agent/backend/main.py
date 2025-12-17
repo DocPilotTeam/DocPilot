@@ -6,7 +6,7 @@ from db.data import user_repo_db
 from api.webhook import router as web_hook
 from api.api_routes import router as parser_api_router
 from agents.kg_builder.openAiKG import router as cypher_test
-from db.repo_queries import insert_repo, get_repo_by_name
+from db.repo_queries import get_repo_by_url, insert_repo
 from agents.parser.parser_manager import ParserManager
 
 from agents.watcher.CodeWatcher import router as watch_router
@@ -27,7 +27,7 @@ def fetchRepo(repository: RepoModal):
     os.makedirs(basePath, exist_ok=True)
     path = os.path.join(basePath, repository.ProjName)
     # Check if repo already exists in DB
-    existing = get_repo_by_name(repository.ProjName)
+    existing = get_repo_by_url(repository.projUrl)
     # Clone or pull repo
     try:
         if not os.path.exists(path):
