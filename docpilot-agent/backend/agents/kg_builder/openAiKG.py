@@ -1,11 +1,12 @@
 from google import genai
+import shutil
 import os
 from api.api_routes import parse_repo as ast_parsed_data,RepoNameRequest
 import json
 from fastapi import APIRouter
 from db.neo4j_connect import driver
 from dotenv import load_dotenv
-
+from db.data import user_repo_db
 load_dotenv()
 
 router=APIRouter()
@@ -56,11 +57,33 @@ AST_JSON = {json.dumps(ast_json)}
      response=client.models.generate_content(
      model="gemini-2.5-flash", contents=system_prompt
      )
-     cypher_text=cypher_text = response.candidates[0].content.parts[0].text.strip()
+     cypher_text = response.candidates[0].content.parts[0].text.strip()
      print(cypher_text)
      with driver.session() as session:
           for query in cypher_text.split("\n"):
                if query:
                     session.run(query=query)
+
+     # Cleanup: Delete local repo and remove from in-memory DB
+     repo_path = user_repo_db[projectName]["local_path"]
+     try:
+            print("Trying to delete:", repo_path)
+
+            import stat
+            def remove_readonly(func, path, excinfo):
+                os.chmod(path, stat.S_IWRITE)
+                func(path)
+
+            shutil.rmtree(repo_path, onerror=remove_readonly)
+            print(f"[Cleanup] Deleted local repo → {repo_path}")
+
+     except Exception as e:
+          print(f"[Cleanup Error] Could not delete repo: {e}")
+
+    # Remove from in-memory DB
+     if projectName in user_repo_db:
+        del user_repo_db[projectName]
+        print(f"[Cleanup] Removed {projectName} from in-memory DB")
+
      return {"cypher": cypher_text}
 
