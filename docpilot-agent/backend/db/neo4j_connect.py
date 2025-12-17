@@ -8,7 +8,6 @@ uri=os.getenv("neo4j_url")
 password=os.getenv("neo4j_pass")
 AUTH=("neo4j",password)
 print(uri)
-print(password)
 
 ## verify connection
 
@@ -18,5 +17,9 @@ if not uri or not password:
 driver=GraphDatabase.driver(uri,auth=("neo4j",password))
 
 
-driver.verify_connectivity()
-print("Connection established")
+try:
+    driver.verify_connectivity()
+    print("Connection established")
+except Exception as e:
+    print("Connection failed:", e)
+
