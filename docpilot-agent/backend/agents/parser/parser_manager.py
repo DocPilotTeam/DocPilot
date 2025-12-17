@@ -15,7 +15,7 @@ class ParserManager:
             "typescript": TypeScriptParser()
         }
 
-        self.llm_fallback = LLMFallbackParser(llm_client=llm_client)
+        self.llm_fallback = LLMFallbackParser()
 
     def parse(self, file_path: str) -> dict:
         lang = detect_language(file_path)
@@ -25,12 +25,5 @@ class ParserManager:
             return self.parsers[lang].parse_file(file_path)
 
         # Otherwise → fallback to LLM
-        if lang != "unknown":
-            return self.llm_fallback.parse_file(file_path, lang)
+        return self.llm_fallback.parse_file(file_path, lang)
 
-        # If totally unknown extension
-        return {
-            "file": file_path,
-            "language": "unknown",
-            "status": "unsupported"
-        }

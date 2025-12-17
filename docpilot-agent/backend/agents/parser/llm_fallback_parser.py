@@ -1,13 +1,19 @@
 import json
-import openai
+import os
+from google import genai
 from .base_parser import BaseParser
+from dotenv import load_dotenv
+load_dotenv()
 
-MODEL = "gpt-4o-mini"
-
+MODEL = "gemini-2.5-flash"
+print("gemini api key=", os.getenv("gemini_api_key"))
 class LLMFallbackParser(BaseParser):
 
-    def __init__(self, llm_client=None):
-        self.client = llm_client or openai
+    def __init__(self):
+        api_key = os.getenv("gemini_api_key")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is missing. Set the environment variable first.")
+        self.client = genai.Client(api_key=api_key)
 
     def parse_file(self, file_path: str, language: str) -> dict:
 
@@ -15,35 +21,35 @@ class LLMFallbackParser(BaseParser):
             code = f.read()
 
         prompt = f"""
-        You are an expert code analyzer. Extract the following
-        from the {language} code below:
+        You are an expert static code analyzer.
 
-        - classes
-        - functions/methods
-        - imports/dependencies
-        - API endpoints (if any)
-        - summary: a short description of the file's purpose
+        Analyze the provided {language} source code and extract structured information.
 
-        Return ONLY a valid JSON object.
+        Return ONLY valid JSON with:
+        - classes: []
+        - functions: []
+        - imports: []
+        - api_endpoints: []
+        - summary: ""
 
         Code:
         {code}
         """
 
-        response = self.client.ChatCompletion.create(
+        response = self.client.models.generate_content(
             model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
+            contents=prompt
         )
 
-        content = response["choices"][0]["message"]["content"]
+        content = response.candidates[0].content.parts[0].text
 
         try:
             parsed = json.loads(content)
-        except:
+        except json.JSONDecodeError:
             parsed = {"raw_output": content}
 
         return {
+            "status": "success",
             "file": file_path,
             "language": language,
             "parsed": parsed
