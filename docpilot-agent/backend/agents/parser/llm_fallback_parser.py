@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MODEL = "gemini-2.5-flash"
-print("gemini api key=", os.getenv("gemini_api_key"))
 class LLMFallbackParser(BaseParser):
 
     def __init__(self):
