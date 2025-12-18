@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import os
 
-from agents.parser.parser_manager import ParserManager
-from db.data import user_repo_db  # <-- in-memory DB storing cloned repo info
+from backend.agents.parser.parser_manager import ParserManager
+from backend.db.data import user_repo_db  # <-- in-memory DB storing cloned repo info
 
 router = APIRouter()
 manager = ParserManager()

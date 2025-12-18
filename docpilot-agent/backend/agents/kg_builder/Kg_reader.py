@@ -1,4 +1,4 @@
-from db.neo4j_connect import driver
+from backend.db.neo4j_connect import driver
 from fastapi import APIRouter
 
 router=APIRouter()

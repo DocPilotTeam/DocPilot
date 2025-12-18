@@ -2,15 +2,15 @@ from fastapi import FastAPI,HTTPException,APIRouter
 from pydantic import BaseModel
 import os
 from git import Repo
-from db.data import user_repo_db
-from api.webhook import router as web_hook
-from api.api_routes import router as parser_api_router
-from agents.kg_builder.openAiKG import router as cypher_test
-from db.repo_queries import get_repo_by_url, insert_repo
-from agents.parser.parser_manager import ParserManager
+from backend.db.data import user_repo_db
+from backend.api.webhook import router as web_hook
+from backend.api.api_routes import router as parser_api_router
+from backend.agents.kg_builder.openAiKG import router as cypher_test
+from backend.db.repo_queries import get_repo_by_url, insert_repo
+# from backend.agents.parser.parser_manager import ParserManager
+from backend.agents.watcher.CodeWatcher import router as watch_router
+from backend.agents.kg_builder.Kg_reader import router as test_router
 
-from agents.watcher.CodeWatcher import router as watch_router
-from agents.kg_builder.Kg_reader import router as test_router
 
 app=FastAPI()
 
@@ -23,7 +23,8 @@ class RepoModal(BaseModel):
 ##CLONE OR PULL
 @app.post("/getRepo")
 def fetchRepo(repository: RepoModal):
-    basePath = "UserRepos"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    basePath = os.path.join(BASE_DIR, "UserRepos")
     os.makedirs(basePath, exist_ok=True)
     path = os.path.join(basePath, repository.ProjName)
     # Check if repo already exists in DB
