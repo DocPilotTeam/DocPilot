@@ -19,4 +19,4 @@ EXT_TO_LANG = {
 
 def detect_language(file_path: str) -> str:
     ext = Path(file_path).suffix.lstrip(".").lower()
-    return EXT_TO_LANG.get(ext, "unknown")
+    return EXT_TO_LANG.get(ext, None)

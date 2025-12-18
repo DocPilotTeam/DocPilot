@@ -1,12 +1,12 @@
 from google import genai
 import shutil
 import os
-from api.api_routes import parse_repo as ast_parsed_data,RepoNameRequest
+from backend.api.api_routes import parse_repo as ast_parsed_data,RepoNameRequest
 import json
 from fastapi import APIRouter
-from db.neo4j_connect import driver
+from backend.db.neo4j_connect import driver
 from dotenv import load_dotenv
-from db.data import user_repo_db
+from backend.db.data import user_repo_db
 load_dotenv()
 
 router=APIRouter()
