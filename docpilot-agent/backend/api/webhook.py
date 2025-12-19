@@ -14,7 +14,7 @@ async def webhook(
     print(f"Received event:{x_github_event}")
     # print(payload)
     print("=================================")
-    print(f"CommitID:{payload["after"]}")
+    print(f"CommitID:{payload['after']}")
     if x_github_event == "push":
         print("New push detected!")
     elif x_github_event=="pull":
