@@ -1,46 +1,54 @@
 import json
 import os
-from google import genai
+from openai import OpenAI
 from .base_parser import BaseParser
 from dotenv import load_dotenv
+
 load_dotenv()
 
-MODEL = "gemini-2.5-flash"
+MODEL = "meta/llama-3.1-8b-instruct"  # example NVIDIA-supported model
+
 class LLMFallbackParser(BaseParser):
 
     def __init__(self):
-        api_key = os.getenv("gemini_api_key")
+        api_key = os.getenv("NVIDIA_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY is missing. Set the environment variable first.")
-        self.client = genai.Client(api_key=api_key)
+            raise ValueError("NVIDIA_API_KEY is missing in .env")
+
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://integrate.api.nvidia.com/v1"
+        )
 
     def parse_file(self, file_path: str, language: str) -> dict:
-
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             code = f.read()
 
         prompt = f"""
-        You are an expert static code analyzer.
+You are an expert static code analyzer.
 
-        Analyze the provided {language} source code and extract structured information.
+Analyze the provided {language} source code and extract structured information.
 
-        Return ONLY valid JSON with:
-        - classes: []
-        - functions: []
-        - imports: []
-        - api_endpoints: []
-        - summary: ""
+Return ONLY valid JSON with this schema:
+{{
+  "classes": [],
+  "functions": [],
+  "imports": [],
+  "api_endpoints": [],
+  "summary": ""
+}}
 
-        Code:
-        {code}
-        """
+Code:
+{code}
+"""
 
-        response = self.client.models.generate_content(
+        response = self.client.chat.completions.create(
             model=MODEL,
-            contents=prompt
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
         )
 
-        content = response.candidates[0].content.parts[0].text
+        content = response.choices[0].message.content
 
         try:
             parsed = json.loads(content)

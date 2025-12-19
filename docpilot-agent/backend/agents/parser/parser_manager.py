@@ -17,13 +17,15 @@ class ParserManager:
 
         self.llm_fallback = LLMFallbackParser()
 
-    def parse(self, file_path: str) -> dict:
+    def parse(self, file_path: str) -> dict | None:
         lang = detect_language(file_path)
+        if not lang:
+            return None
 
-        # If static parser exists → use it
+        # Use static parser if available
         if lang in self.parsers:
             return self.parsers[lang].parse_file(file_path)
 
-        # Otherwise → fallback to LLM
+        # Use LLM only for supported-but-not-implemented languages
         return self.llm_fallback.parse_file(file_path, lang)
 
