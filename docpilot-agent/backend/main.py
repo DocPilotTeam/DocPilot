@@ -10,7 +10,7 @@ from backend.db.repo_queries import get_repo_by_url, insert_repo
 # from backend.agents.parser.parser_manager import ParserManager
 from backend.agents.watcher.CodeWatcher import router as watch_router
 from backend.agents.kg_builder.Kg_reader import router as test_router
-from backend.api.api_routes import router as documentation_endpoint
+from backend.api.api_routes import do_gen_router as documentation_endpoint
 
 
 app=FastAPI()

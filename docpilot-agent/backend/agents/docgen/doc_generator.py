@@ -2,6 +2,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from backend.agents.kg_builder.Kg_reader import dataRetrive as kg_dataRetrive
 import os
+import re
 
 
 load_dotenv()
@@ -14,39 +15,54 @@ client = OpenAI(
 def  generate_docs(projName:str):
     data=kg_dataRetrive(projName)
     prompt=f"""
-You are a senior software engineer and technical writer.
+You are a senior software engineer and technical documentation expert.
 
-Your task is to generate **high-quality project documentation** in **Markdown (.md)** format
-using ONLY the provided structured knowledge graph data.
+Your task is to generate a CLEAN, PROFESSIONAL, and FRAMEWORK-AGNOSTIC
+README.md file using the provided knowledge graph data extracted from source code.
 
 STRICT RULES:
-1. Use ONLY the given data. Do NOT assume or invent anything.
-2. Output valid Markdown only.
-3. Use clear headings, bullet points, and code-style formatting.
-4. Follow the structure below exactly.
-5. Be concise but complete.
+1. Output ONLY valid GitHub-flavored Markdown.
+2. Do NOT mention specific programming languages or frameworks explicitly.
+3. Do NOT include raw AST data, internal IDs, or database-specific details.
+4. Use clean, relative file paths (remove repository root prefixes).
+5. Do NOT list getters/setters or trivial utility methods.
+6. Summarize functionality based on architectural roles and behavior.
+7. Keep content concise, readable, and suitable for open-source repositories.
 
-DOCUMENT STRUCTURE:
+README STRUCTURE (MUST FOLLOW EXACTLY):
 
-# {projName} – Project Documentation
+# {projName}
 
-## Project Overview
-Briefly describe what this project does based on class and method names.
+## Overview
+Describe the purpose of the project in 2–3 sentences, focusing on functionality.
 
-## Code Structure Overview
-Explain how the project is organized at a high level.
+## Architecture Overview
+Explain the high-level architectural pattern and separation of concerns.
 
-## Files and Components
-For each file:
-- File path
-- Classes inside the file
-- Methods inside each class with short explanations inferred from method names
+## Project Structure
+Describe major directories and their responsibilities without listing every file.
 
-## Key Classes Summary
-List important classes and their responsibilities.
+## Core Components
+Summarize the responsibilities of key components:
+- Entry point / bootstrap module
+- Controllers / handlers
+- Services / business logic layer
+- Data models
+- Persistence / repositories
+- Test modules
 
-## Method Summary
-Summarize important methods and what they do.
+## Application Flow
+Explain how a typical request or operation moves through the system.
+
+## Running the Project
+Provide generic, stack-agnostic steps to run the application.
+
+## Testing
+Describe how tests are organized and their purpose.
+
+## Notes
+Include any important architectural or design observations.
+
 
 INPUT DATA (DO NOT REPEAT THIS IN OUTPUT):
 {data}
@@ -54,7 +70,7 @@ INPUT DATA (DO NOT REPEAT THIS IN OUTPUT):
 Now generate the documentation.
 """
     result=client.chat.completions.create(
-    model="allenai/olmo-3.1-32b-think:free",
+    model="tngtech/deepseek-r1t-chimera:free",
     messages=[
         {"role":"user","content":prompt}
     ],
@@ -62,10 +78,18 @@ Now generate the documentation.
 
 
     )
-    return result.choices[0].message.content
+    content= result.choices[0].message.content
+
+    clean_content=re.sub(r'^```markdown\n|```$', '', content, flags=re.MULTILINE).strip()
+
+    clean_content=clean_content.replace("\\n","\n")
+
+    print(clean_content)
+
+    return clean_content
 
 
 
-    print(result.choices[0].message.content)
+
 
 # print(kg_dataRetrive("emp"))
