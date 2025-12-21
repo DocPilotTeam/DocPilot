@@ -55,7 +55,42 @@ Agent health status
 
 📂 Project Structure.
 
-<img width="593" height="688" alt="image" src="https://github.com/user-attachments/assets/dbbaaa08-412a-482a-bb6e-cb0e4f1e2f51" />
+autodoc-agent/<br>
+│<br>
+├── backend/<br>
+│   ├── api/               → FastAPI services (webhook, triggers, project mgmt)<br>
+│   ├── agents/<br>
+│   │    ├── watcher/      → Code watcher agent<br>
+│   │    ├── parser/       → AST parsers (Java, JS/TS, SQL)<br>
+│   │    ├── kg-builder/   → Knowledge graph builder<br>
+│   │    ├── docgen/       → Documentation generator<br>
+│   │    ├── diagramgen/   → Diagram generator<br>
+│   │    └── publisher/    → Commit/PR automation<br>
+│   ├── models/            → Pydantic models + DB models<br>
+│   ├── db/                → PostgreSQL + Neo4j integration<br>
+│   ├── utils/             → Git operations, LLM utilities, file readers<br>
+│   └── [main.py](http://main.py/)            → FastAPI entry<br>
+│<br>
+├── services/<br>
+│    ├── llm-engine/       → Agent orchestration, prompts, workflows<br>
+│    └── ast-services/     → JavaParser + Babel parser invocations<br>
+│<br>
+├── frontend-dashboard/<br>
+│    ├── react-app/        → Project dashboard<br>
+│    └── components/       → Docs viewer, diagrams preview<br>
+│<br>
+├── docs/                  → Auto generated docs<br>
+│<br>
+├── .github/workflows/<br>
+│    └── autodoc.yml       → GitHub Actions pipeline<br>
+│<br>
+└── run_autodoc.py         → Entry file for GitHub Actions runner<br>
+
+Webhook Integration<br>
+
+├── Ngrok  → for Focusing local APIs to the internet<br>
+<br>
+├── Header and Request from FASTAPI for reciving the headers and Requests to serve on<br>
 
 
 ⚙️ How It Works
