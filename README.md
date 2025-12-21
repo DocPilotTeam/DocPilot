@@ -67,7 +67,7 @@ autodoc-agent/<br>
 │   │    ├── diagramgen/   → Diagram generator<br>
 │   │    └── publisher/    → Commit/PR automation<br>
 │   ├── models/            → Pydantic models + DB models<br>
-│   ├── db/                → PostgreSQL + Neo4j integration<br>
+│   ├── db/                → PostgreSQL(Supabase) + Neo4j integration<br>
 │   ├── utils/             → Git operations, LLM utilities, file readers<br>
 │   └── [main.py](http://main.py/)            → FastAPI entry<br>
 │<br>
