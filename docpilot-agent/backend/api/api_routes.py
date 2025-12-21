@@ -6,7 +6,9 @@ from backend.agents.parser.parser_manager import ParserManager
 from backend.db.data import user_repo_db  # <-- in-memory DB storing cloned repo info
 from backend.agents.docgen.doc_generator import generate_docs
 
+
 router = APIRouter()
+do_gen_router = APIRouter()
 manager = ParserManager()
 
 # Request Models
@@ -53,7 +55,7 @@ def parse_repo(request: RepoNameRequest):
 
 
 #DocGen Integration Endpoint
-@router.post("/generate-docs")
+@do_gen_router.post("/generate-docs")
 def generate_documentation(request: RepoNameRequest):
     projName=request.proj_name
 
