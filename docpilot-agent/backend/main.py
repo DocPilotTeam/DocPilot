@@ -11,61 +11,71 @@ from backend.db.repo_queries import get_repo_by_url, insert_repo
 from backend.agents.watcher.CodeWatcher import router as watch_router
 from backend.agents.kg_builder.Kg_reader import router as test_router
 from backend.api.api_routes import do_gen_router as documentation_endpoint
+from backend.auth.router import router as authentication_router
+from backend.repositories.router import router as repositories_router
+from fastapi import Depends
+from backend.core.auth_dependency import get_current_user
 
 
 app=FastAPI()
 
 class RepoModal(BaseModel):
-    projUrl:str
-    BranchName:str
-    AuthToken:str|None=None
-    ProjName:str
+    projUrl: str
+    BranchName: str
+    ProjName: str
 
-##CLONE OR PULL
+
 @app.post("/getRepo")
-def fetchRepo(repository: RepoModal):
+def fetchRepo(
+    repository: RepoModal,
+    user=Depends(get_current_user)  
+):
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     basePath = os.path.join(BASE_DIR, "UserRepos")
     os.makedirs(basePath, exist_ok=True)
+
     path = os.path.join(basePath, repository.ProjName)
-    # Check if repo already exists in DB
+
+    github_token = user.get("github_token")
+    if not github_token:
+        raise HTTPException(status_code=401, detail="GitHub token missing")
+
+    clone_url = repository.projUrl
+
+    if clone_url.startswith("https://"):
+        clone_url = clone_url.replace(
+            "https://",
+            f"https://{github_token}@"
+        )
+
     existing = get_repo_by_url(repository.projUrl)
-    # Clone or pull repo
+
     try:
         if not os.path.exists(path):
-            Repo.clone_from(repository.projUrl, path)
+            Repo.clone_from(clone_url, path, branch=repository.BranchName)
         else:
             repo_obj = Repo(path)
             repo_obj.git.reset("--hard")
             repo_obj.git.clean("-fd")
             repo_obj.remotes.origin.pull()
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Git operation failed: {str(e)}")
-    # Insert only if not exists
-    doesExists=False #flag to check if already exists in supabase
+        raise HTTPException(status_code=400, detail=str(e))
+
     if len(existing.data) == 0:
         insert_repo(
             proj_name=repository.ProjName,
             repo_url=repository.projUrl,
             branch=repository.BranchName,
-            auth_token=repository.AuthToken
+            auth_token="stored_in_jwt"
         )
-    else:
-        print("Repo already exists in Supabase, skipping insert.")
-        doesExists=True
 
-    #Store in-memory for parser
     user_repo_db[repository.ProjName] = {
         "local_path": path,
         "repo_url": repository.projUrl,
-        "branch": repository.BranchName,
-        "auth_token": repository.AuthToken
+        "branch": repository.BranchName
     }
-    if not doesExists:
-        print(f"[Memory] Saved {repository.ProjName} in user_repo_db")
-        return {"message": "Project cloned & stored in supabase successfully"}
-    else:
-        return {"message": "Project pulled & already exists in Supabase"}
+
+    return {"message": "Repository processed successfully"}
 
 
 ##CODE WATCHER
@@ -83,3 +93,9 @@ app.include_router(test_router,prefix="/api")
 
 #DocGen Router
 app.include_router(documentation_endpoint,prefix="/api")
+
+
+
+app.include_router(authentication_router)
+
+app.include_router(repositories_router,prefix="/api")

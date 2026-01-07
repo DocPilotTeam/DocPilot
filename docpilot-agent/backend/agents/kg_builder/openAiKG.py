@@ -17,8 +17,6 @@ client=genai.Client(api_key=apiKey)
 
 # reqObj=RepoNameRequest(proj_name=projectName)
 
-
-
 @router.post("/cypher")
 def showCyphertext(request:RepoNameRequest):
      projectName = request.proj_name
