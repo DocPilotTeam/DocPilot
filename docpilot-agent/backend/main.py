@@ -7,7 +7,10 @@ from backend.agents.watcher.CodeWatcher import router as watch_router
 from backend.agents.kg_builder.Kg_reader import router as test_router
 from backend.api.api_routes import do_gen_router as documentation_endpoint
 from backend.agents.cloner.clone_agent import app as clone_agent_app   
-
+from backend.auth.router import router as authentication_router
+from backend.repositories.router import router as repositories_router
+from fastapi import Depends
+from backend.core.auth_dependency import get_current_user
 app=FastAPI()
 
 ##CLONING AGENT
