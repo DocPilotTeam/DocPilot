@@ -25,22 +25,24 @@ class LLMFallbackParser(BaseParser):
             code = f.read()
 
         prompt = f"""
-You are an expert static code analyzer.
+        You are an expert static code analyzer.
 
-Analyze the provided {language} source code and extract structured information.
+        Analyze the provided {language} source code and extract structured information.
 
-Return ONLY valid JSON with this schema:
-{{
-  "classes": [],
-  "functions": [],
-  "imports": [],
-  "api_endpoints": [],
-  "summary": ""
-}}
+        Return ONLY valid JSON with this schema:
+        {{
+        "packages": [],
+        "file_structure": [],
+        "classes": [],
+        "functions": [],
+        "imports": [],
+        "api_endpoints": []
+        "interfaces": []
+        }}
 
-Code:
-{code}
-"""
+        Code:
+        {code}
+        """
 
         response = self.client.chat.completions.create(
             model=MODEL,

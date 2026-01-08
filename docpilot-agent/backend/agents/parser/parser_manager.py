@@ -12,7 +12,7 @@ class ParserManager:
             "python": PythonParser(),
             "java": JavaParser(),
             "javascript": JSParser(),
-            "typescript": TypeScriptParser()
+            "typescript": TypeScriptParser()  
         }
 
         self.llm_fallback = LLMFallbackParser()
