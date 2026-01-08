@@ -28,3 +28,9 @@ app.include_router(test_router,prefix="/api")
 
 #DocGen Router
 app.include_router(documentation_endpoint,prefix="/api")
+
+
+
+app.include_router(authentication_router)
+
+app.include_router(repositories_router,prefix="/api")
