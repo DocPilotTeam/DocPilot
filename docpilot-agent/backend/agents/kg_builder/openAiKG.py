@@ -1,7 +1,7 @@
 from google import genai
 import shutil
 import os
-from backend.api.api_routes import parse_repo as ast_parsed_data,RepoNameRequest
+from backend.api.parser_api import parse_repo as ast_parsed_data,RepoNameRequest
 import json
 from fastapi import APIRouter
 from backend.db.neo4j_connect import driver
