@@ -3,6 +3,7 @@ from .python_parser import PythonParser
 from .java_parser import JavaParser
 from .js_parser import JSParser
 from .typescript_parser import TypeScriptParser
+from .golang_parser import GoParser
 from .llm_fallback_parser import LLMFallbackParser
 
 class ParserManager:
@@ -12,7 +13,8 @@ class ParserManager:
             "python": PythonParser(),
             "java": JavaParser(),
             "javascript": JSParser(),
-            "typescript": TypeScriptParser()  
+            "typescript": TypeScriptParser(),
+            "go": GoParser(),
         }
 
         self.llm_fallback = LLMFallbackParser()
