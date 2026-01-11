@@ -20,20 +20,15 @@ app.include_router(watch_router,prefix="/api")
 
 ##WebHook
 app.include_router(web_hook,prefix="/api")
-
 ##CODE PARSER
 app.include_router(parser_api_router, prefix="/api")
-
 ##Cypher Test Router
 app.include_router(cypher_test,prefix="/api")
-
+##KG Reader Test Router
 app.include_router(test_router,prefix="/api")
-
 #DocGen Router
 app.include_router(documentation_endpoint,prefix="/api")
-
-
-
+#Authentication Router
 app.include_router(authentication_router)
-
+#Repositories Router
 app.include_router(repositories_router,prefix="/api")

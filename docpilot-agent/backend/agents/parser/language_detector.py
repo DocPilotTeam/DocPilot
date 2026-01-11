@@ -14,6 +14,7 @@ EXT_TO_LANG = {
     "cs": "csharp",
     "php": "php",
     "swift": "swift",
+    "cs": "csharp",
     "m": "objectivec"
 }
 
