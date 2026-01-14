@@ -14,8 +14,8 @@ EXT_TO_LANG = {
     "cs": "csharp",
     "php": "php",
     "swift": "swift",
-    "cs": "csharp",
-    "m": "objectivec"
+    "m": "objectivec",
+    "sql": "sql"
 }
 
 def detect_language(file_path: str) -> str:
