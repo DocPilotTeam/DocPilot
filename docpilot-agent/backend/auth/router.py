@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
 from backend.core.config import settings
-from backend.auth.github import exchange_code_for_token, get_github_user
+from backend.auth.github import exchange_code_for_token, get_github_user, get_user_repositories
 from backend.users.user_queries import upsert_user, get_user_by_github_id
 from backend.auth.jwt import create_access_token
 
@@ -30,6 +30,9 @@ async def github_callback(code: str):
         # Fetch GitHub user
         gh_user = await get_github_user(access_token)
 
+        # Fetch user's repositories
+        repositories = await get_user_repositories(access_token)
+
         # Store / update user in DB
         upsert_user(gh_user)
 
@@ -47,7 +50,8 @@ async def github_callback(code: str):
             "user": {
                 "id": user["id"],
                 "username": user["username"]
-            }
+            },
+            "repositories": repositories
         }
 
     except Exception as e:
