@@ -1,32 +1,35 @@
 from google import genai
 import shutil
 import os
-from backend.api.parser_api import parse_repo as ast_parsed_data,RepoNameRequest
 import json
 from fastapi import APIRouter
 from backend.db.neo4j_connect import driver
 from dotenv import load_dotenv
 from backend.db.data import user_repo_db
+from celery.utils.log import get_task_logger
+
 load_dotenv()
 
 router=APIRouter()
 apiKey=os.getenv("gemini_api_key")
 client=genai.Client(api_key=apiKey)
+logger = get_task_logger(__name__)
 
-# projectName="interviewAI"
 
-# reqObj=RepoNameRequest(proj_name=projectName)
-
-@router.post("/cypher")
-def showCyphertext(request:RepoNameRequest):
-     projectName = request.proj_name
-
-     reqObj = RepoNameRequest(proj_name=projectName)
-
-     parsed_output=ast_parsed_data(reqObj)
-     ast_json=parsed_output["data"]
-
-     system_prompt =  f"""
+def generate_cypher_from_ast(projectName: str, ast_json: list) -> list:
+    """
+    Generate Neo4j Cypher statements from AST JSON data
+    Used by Celery tasks for knowledge graph building
+    
+    Args:
+        projectName: Name of the project
+        ast_json: List of parsed AST data from parser
+    
+    Returns:
+        List of Cypher statements
+    """
+    try:
+        system_prompt = f"""
 You are an expert Neo4j Cypher generator.
 
 Your task is to convert the provided AST JSON into Neo4j Cypher statements
@@ -94,20 +97,44 @@ PROJECT = "{projectName}"
 AST_JSON = {json.dumps(ast_json)}
 """
 
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", 
+            contents=system_prompt
+        )
+        
+        cypher_text = response.candidates[0].content.parts[0].text.strip()
+        cypher_statements = [q.strip() for q in cypher_text.split("\n") if q.strip()]
+        
+        logger.info(f"Generated {len(cypher_statements)} Cypher statements for {projectName}")
+        return cypher_statements
+    
+    except Exception as e:
+        logger.error(f"Failed to generate Cypher: {str(e)}")
+        raise
 
-     response=client.models.generate_content(
-     model="gemini-2.5-flash", contents=system_prompt
-     )
-     cypher_text = response.candidates[0].content.parts[0].text.strip()
-     print(cypher_text)
-     with driver.session() as session:
-          for query in cypher_text.split("\n"):
-               if query:
+
+@router.post("/cypher")
+def showCyphertext(request):
+    # Lazy import to avoid circular dependency
+    from backend.api.api_routes import parse_repo as ast_parsed_data, RepoNameRequest
+    
+    projectName = request.proj_name
+    reqObj = RepoNameRequest(proj_name=projectName)
+
+    parsed_output = ast_parsed_data(reqObj)
+    ast_json = parsed_output["data"]
+
+    try:
+        cypher_statements = generate_cypher_from_ast(projectName, ast_json)
+        
+        with driver.session() as session:
+            for query in cypher_statements:
+                if query:
                     session.run(query=query)
 
-     # Cleanup: Delete local repo and remove from in-memory DB
-     repo_path = user_repo_db[projectName]["local_path"]
-     try:
+        # Cleanup: Delete local repo and remove from in-memory DB
+        repo_path = user_repo_db[projectName]["local_path"]
+        try:
             print("Trying to delete:", repo_path)
 
             import stat
@@ -118,13 +145,15 @@ AST_JSON = {json.dumps(ast_json)}
             shutil.rmtree(repo_path, onerror=remove_readonly)
             print(f"[Cleanup] Deleted local repo → {repo_path}")
 
-     except Exception as e:
-          print(f"[Cleanup Error] Could not delete repo: {e}")
+        except Exception as e:
+            print(f"[Cleanup Error] Could not delete repo: {e}")
 
-    # Remove from in-memory DB
-     if projectName in user_repo_db:
-        del user_repo_db[projectName]
-        print(f"[Cleanup] Removed {projectName} from in-memory DB")
+        # Remove from in-memory DB
+        if projectName in user_repo_db:
+            del user_repo_db[projectName]
+            print(f"[Cleanup] Removed {projectName} from in-memory DB")
 
-     return {"cypher": cypher_text}
-
+        return {"cypher": "\n".join(cypher_statements), "count": len(cypher_statements)}
+    
+    except Exception as e:
+        raise Exception(f"Cypher generation failed: {str(e)}")

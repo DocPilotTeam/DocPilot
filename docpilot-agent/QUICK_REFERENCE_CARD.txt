@@ -1,0 +1,137 @@
+# 🎯 HOSTED REDIS - QUICK REFERENCE CARD
+
+## Print This! Keep This Handy!
+
+---
+
+## 📝 The 3 Things You Need
+
+```
+┌────────────────────────────────────────────┐
+│  FROM YOUR REDIS PROVIDER, GET:            │
+├────────────────────────────────────────────┤
+│                                            │
+│  1. Redis Host/Endpoint                   │
+│     My Value: _________________________    │
+│                                            │
+│  2. Redis Port                             │
+│     My Value: _________________________    │
+│                                            │
+│  3. Redis Password                         │
+│     My Value: _________________________    │
+│     ⚠️ KEEP SECRET!                        │
+│                                            │
+└────────────────────────────────────────────┘
+```
+
+---
+
+## 🔧 Format to Use
+
+```
+redis://:PASSWORD@HOST:PORT/0   (for Broker)
+redis://:PASSWORD@HOST:PORT/1   (for Results)
+```
+
+---
+
+## 📋 .env File Template
+
+```env
+CELERY_BROKER_URL=redis://:YOUR_PASSWORD@YOUR_HOST:YOUR_PORT/0
+CELERY_RESULT_BACKEND=redis://:YOUR_PASSWORD@YOUR_HOST:YOUR_PORT/1
+```
+
+---
+
+## 🏆 Top Providers
+
+| Provider | Free | Setup | Website |
+|----------|------|-------|---------|
+| **Redis Cloud** ⭐ | 30 MB | 5 min | redis.io/try-free |
+| AWS ElastiCache | 750 hrs | 10 min | aws.amazon.com |
+| DigitalOcean | No | 5 min | digitalocean.com |
+| Azure | No | 10 min | azure.com |
+| Google | No | 10 min | cloud.google.com |
+
+---
+
+## ✅ Verification Commands
+
+```bash
+# Test 1: Check config loaded
+myenv\Scripts\python -c "from backend.core.config import settings; print(settings.CELERY_BROKER_URL[:30])"
+
+# Test 2: Start Celery worker
+myenv\Scripts\celery -A backend.celery_config worker -l info
+# Expected: [*] Ready to accept tasks!
+
+# Test 3: Test API
+curl http://localhost:8000/api/tasks
+# Expected: {"active": 0, "scheduled": 0, "reserved": 0}
+```
+
+---
+
+## 🚀 Startup Commands
+
+```bash
+# Terminal 1: Celery Worker
+cd d:\AutoDoc-Backend\docpilot-agent
+myenv\Scripts\celery -A backend.celery_config worker -l info
+
+# Terminal 2: FastAPI
+cd d:\AutoDoc-Backend\docpilot-agent\backend
+uvicorn main:app --reload --port 8000
+
+# Terminal 3: Optional Monitoring
+myenv\Scripts\celery -A backend.celery_config flower
+# Open: http://localhost:5555
+```
+
+---
+
+## 🆘 Quick Troubleshooting
+
+| Problem | Check |
+|---------|-------|
+| Connection refused | Is host/port correct? |
+| WRONGPASS | Is password copied exactly? |
+| Timeout | Is IP whitelisted? |
+| Can't import | Check .env location |
+
+---
+
+## 📚 Documentation Files
+
+| File | Purpose | Time |
+|------|---------|------|
+| REDIS_SETUP_ONE_PAGE.md | This format | 2 min |
+| HOSTED_REDIS_START_HERE.md | Begin here | 5 min |
+| README_REDIS_CREDENTIALS.md | Complete guide | 5 min |
+| REDIS_CREDENTIALS_CHECKLIST.md | Steps | 10 min |
+| HOSTED_REDIS_SETUP.md | Provider specific | 15 min |
+
+---
+
+## 🎯 Next Actions
+
+```
+1. Choose: Redis Cloud (recommended)
+2. Create: Free account at redis.io/try-free
+3. Build: New database (2 min)
+4. Copy: Host, Port, Password
+5. Edit: Update .env file
+6. Test: Run celery worker
+7. Deploy: Your application!
+```
+
+---
+
+## ✨ You've Got This!
+
+Everything is ready.
+Just provide 3 values.
+Then deploy!
+
+🚀
