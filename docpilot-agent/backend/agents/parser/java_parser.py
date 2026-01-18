@@ -21,6 +21,7 @@ class JavaParser(BaseParser):
             "fields": self._parse_fields(code),
             "constructors": self._parse_constructors(code),
             "methods": self._parse_methods(code),
+            "apis": self._parse_apis(code),
             "comments": self._parse_comments(code),
         }
 
@@ -161,3 +162,117 @@ class JavaParser(BaseParser):
             "javadoc": javadoc,
             "single_line": single_line
         }
+
+    # -------------------------
+    # APIs (Spring MVC / JAX-RS)
+    # -------------------------
+    def _parse_apis(self, code):
+        """Parse API endpoints (Spring MVC and JAX-RS).
+        Returns a list of endpoints with name, http_methods, path, return_type, parameters, annotations."""
+        # class-level base paths
+        class_bases = {}
+        class_ann_pattern = r'@(?P<ann>RequestMapping|Path)\s*(\([^)]*\))?[\s\S]*?class\s+(?P<classname>\w+)'
+        for m in re.finditer(class_ann_pattern, code):
+            ann_block = m.group(0)
+            base_path = self._extract_path_from_annotation(ann_block)
+            classname = m.group('classname')
+            class_bases[classname] = base_path or ""
+
+        # collect class positions to map methods to classes
+        class_positions = [(cm.group(1), cm.start()) for cm in re.finditer(r'class\s+(\w+)', code)]
+
+        # method-level annotations and methods
+        method_pattern = r'(?P<annotations>(?:@[A-Za-z0-9_]+\s*(?:\([^)]*\))?\s*)+)\s*(?:public|private|protected)?\s*(?:static|final|synchronized)?\s*([\w<>\[\]]+)\s+(?P<name>\w+)\s*\((?P<params>[^)]*)\)'
+        apis = []
+        for m in re.finditer(method_pattern, code):
+            ann_block = m.group('annotations')
+            method_name = m.group('name')
+            return_type = m.group(3)
+            params = m.group('params')
+            annotations = re.findall(r'@[\w]+(?:\([^)]*\))?', ann_block)
+
+            # find enclosing class name by position
+            method_pos = m.start()
+            cls_name = None
+            for cname, cpos in class_positions:
+                if cpos < method_pos:
+                    cls_name = cname
+                else:
+                    break
+            base_path = class_bases.get(cls_name, "")
+
+            # find mapping annotations
+            mapping_annos = []
+            for ann in annotations:
+                name_match = re.match(r'@([A-Za-z0-9_]+)', ann)
+                if not name_match:
+                    continue
+                ann_name = name_match.group(1)
+
+                http_methods = []
+                method_path = None
+
+                if ann_name in ("GetMapping", "PostMapping", "PutMapping", "DeleteMapping", "PatchMapping"):
+                    http_methods = [ann_name.replace('Mapping', '').upper()]
+                    method_path = self._extract_path_from_annotation(ann)
+                elif ann_name == 'RequestMapping':
+                    method_path = self._extract_path_from_annotation(ann)
+                    req_method = self._extract_method_from_requestmapping(ann)
+                    if req_method:
+                        http_methods = [req_method]
+                elif ann_name in ("GET", "POST", "PUT", "DELETE", "PATCH"):
+                    http_methods = [ann_name]
+                    # look for @Path in annotations
+                    for a in annotations:
+                        if a.startswith('@Path'):
+                            method_path = self._extract_path_from_annotation(a)
+                elif ann_name == 'Path':
+                    method_path = self._extract_path_from_annotation(ann)
+
+                if http_methods or method_path is not None:
+                    full_path = self._join_paths(base_path, method_path)
+                    apis.append({
+                        "name": method_name,
+                        "http_methods": http_methods if http_methods else [],
+                        "path": full_path,
+                        "return_type": return_type,
+                        "parameters": self._parse_parameters(params),
+                        "annotations": annotations
+                    })
+
+        return apis
+
+    def _extract_path_from_annotation(self, ann_str: str):
+        # try path=, value=, or a single quoted argument
+        m = re.search(r'path\s*=\s*"([^"]+)"', ann_str)
+        if not m:
+            m = re.search(r'value\s*=\s*"([^"]+)"', ann_str)
+        if not m:
+            m = re.search(r'\(\s*"([^"]+)"\s*\)', ann_str)
+        if not m:
+            m = re.search(r'"([^"]+)"', ann_str)
+        return m.group(1).strip() if m else None
+
+    def _extract_method_from_requestmapping(self, ann_str: str):
+        # look for RequestMethod.X or method = {RequestMethod.X,...}
+        m = re.search(r'RequestMethod\.([A-Z_]+)', ann_str)
+        if m:
+            return m.group(1)
+        m = re.search(r'method\s*=\s*\{?\s*([^\}]+)\s*\}?', ann_str)
+        if m:
+            inner = m.group(1)
+            m2 = re.search(r'RequestMethod\.([A-Z_]+)', inner)
+            if m2:
+                return m2.group(1)
+        return None
+
+    def _join_paths(self, base: str, path: str):
+        if not base:
+            base = ''
+        if not path:
+            path = ''
+        parts = [p.strip('/') for p in (base, path) if p and p.strip('/')]
+        if not parts:
+            return ''
+        return '/' + '/'.join(parts)
+
