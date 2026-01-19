@@ -45,68 +45,66 @@ class TypeScriptParser(BaseParser):
         except Exception as e:
             return {"file": file_path, "language": "typescript", "error": f"could not read file: {e}"}
 
-        # quick normalize (remove long block comments to reduce false positives)
-        code = re.sub(r'/\*[\s\S]*?\*/', '', raw)
-        code_no_line_comments = re.sub(r'//.*', '', code)
+        # Normalize code: remove comments in one pass to reduce regex operations
+        code = re.sub(r'/\*[\s\S]*?\*/|//.*', '', raw)
 
-        interfaces = self.RE_INTERFACE.findall(code_no_line_comments)
-        type_aliases = self.RE_TYPE_ALIAS.findall(code_no_line_comments)
-        enums = self.RE_ENUM.findall(code_no_line_comments)
+        # Extract all elements using compiled regexes
+        interfaces = self.RE_INTERFACE.findall(code)
+        type_aliases = self.RE_TYPE_ALIAS.findall(code)
+        enums = self.RE_ENUM.findall(code)
 
-        # classes and generics
+        # Classes with generics
         classes = []
-        for m in self.RE_CLASS.finditer(code_no_line_comments):
+        class_positions = []
+        for m in self.RE_CLASS.finditer(code):
             cls_name = m.group(1)
             generics = m.group(2).strip() if m.group(2) else None
             classes.append({"name": cls_name, "generics": generics})
+            class_positions.append((cls_name, m.start()))
 
-        # imports (unique)
-        imports = list(dict.fromkeys(self.RE_IMPORT.findall(code_no_line_comments)))
+        # Imports (unique)
+        imports = list(set(self.RE_IMPORT.findall(code)))
 
-        # exports
-        exports = self.RE_EXPORT.findall(code_no_line_comments)
+        # Exports
+        exports = self.RE_EXPORT.findall(code)
 
-        # top-level functions and consts (unique)
-        functions = list(dict.fromkeys(self.RE_TOP_FUNC.findall(code_no_line_comments)))
-        top_consts = list(dict.fromkeys(self.RE_TOP_CONST.findall(code_no_line_comments)))
+        # Top-level functions and consts (unique)
+        functions = list(set(self.RE_TOP_FUNC.findall(code)))
+        top_consts = list(set(self.RE_TOP_CONST.findall(code)))
 
-        # decorators on classes: find class blocks with leading decorators
+        # Class decorators: find decorators preceding class declarations
         class_decorators = []
-        # pattern: decorators preceding class declaration (up to 3 decorators)
-        for cm in re.finditer(r'((?:@\w+(?:\([^)]*\))?\s*){0,6})\s*(?:export\s+)?class\s+([A-Za-z_]\w*)', code_no_line_comments):
+        for cm in re.finditer(r'((?:@\w+(?:\([^)]*\))?\s*){0,6})\s*(?:export\s+)?class\s+([A-Za-z_]\w*)', code):
             decorator_block = cm.group(1).strip()
-            clsname = cm.group(2)
+            clsname = cm.group(3)
             if decorator_block:
                 decs = self.RE_DECORATOR.findall(decorator_block)
-                decs_clean = [{"name": d[0], "arg": d[2] if d[2] else None} for d in decs]
+                decs_clean = [{"name": d[0], "arg": d[2] if len(d) > 2 and d[2] else None} for d in decs]
             else:
                 decs_clean = []
             class_decorators.append({"class": clsname, "decorators": decs_clean})
 
-        # method-level decorators + routes (NestJS-style)
+        # Routes (method decorators)
         routes = []
-        for m in self.RE_METHOD_WITH_DECORATOR.finditer(code_no_line_comments):
-            dec = m.group('decorator')
-            path = m.group('path')
-            name = m.group('name')
-            routes.append({"decorator": dec, "path": path, "handler": name})
+        for m in self.RE_METHOD_WITH_DECORATOR.finditer(code):
+            routes.append({
+                "decorator": m.group('decorator'),
+                "path": m.group('path'),
+                "handler": m.group('name')
+            })
 
-        # general methods inside classes (best-effort)
-        # find class bodies and extract method names (simple heuristic)
+        # Class methods: extract methods from class bodies efficiently
         class_methods = {}
-        for cls in classes:
-            # attempt to locate class body by class name
-            pattern = r'class\s+' + re.escape(cls["name"]) + r'(?:\s*<[^>]+>)?\s*{([\s\S]*?)}'
-            cmatch = re.search(pattern, code_no_line_comments)
-            methods = []
-            if cmatch:
-                body = cmatch.group(1)
-                for mm in self.RE_CLASS_METHOD.finditer(body):
-                    methods.append(mm.group('name'))
-            class_methods[cls["name"]] = list(dict.fromkeys(methods))
+        # Find all class bodies at once
+        class_body_pattern = re.compile(r'class\s+([A-Za-z_]\w*)(?:\s*<[^>]+>)?\s*{([^{}]*(?:{[^{}]*}[^{}]*)*)}', re.MULTILINE | re.DOTALL)
+        for match in class_body_pattern.finditer(code):
+            cls_name = match.group(1)
+            body = match.group(2)
+            methods = list(set(self.RE_CLASS_METHOD.findall(body)))
+            class_methods[cls_name] = methods
 
-        # short summary heuristics
-        summary = self._generate_summary(code_no_line_comments)
+        # Generate summary
+        summary = self._generate_summary(code)
 
         result = {
             "file": file_path,
