@@ -6,6 +6,7 @@ Supports both local and hosted Redis services
 import os
 from celery import Celery
 from dotenv import load_dotenv
+import ssl
 
 load_dotenv()
 
