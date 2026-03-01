@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL="gemini-2.5-flash"
+# Use free Mistral model on OpenRouter instead of Gemini
+MODEL = "mistralai/mistral-7b-instruct"
+
 class LLMFallbackParser(BaseParser):
     """
     Fallback parser that uses an LLM when available, otherwise uses a local
@@ -20,14 +22,15 @@ class LLMFallbackParser(BaseParser):
     """
 
     def __init__(self):
-        api_key = os.getenv("gemini_api_key")
+        # Try to use OpenRouter API key first (preferred for production)
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         if api_key:
             self.client = OpenAI(
                 api_key=api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+                base_url="https://openrouter.ai/api/v1"
             )
         else:
-            # don't raise here — prefer graceful heuristic fallback
+            # Gracefully disable LLM parsing if no API key is available
             self.client = None
 
     # ------------------ Heuristic parser ------------------
