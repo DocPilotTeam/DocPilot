@@ -70,7 +70,7 @@ INPUT DATA (DO NOT REPEAT THIS IN OUTPUT):
 Now generate the documentation.
 """
     result=client.chat.completions.create(
-    model="tngtech/deepseek-r1t-chimera:free",
+    model="nvidia/nemotron-3-nano-30b-a3b:free",
     messages=[
         {"role":"user","content":prompt}
     ],
