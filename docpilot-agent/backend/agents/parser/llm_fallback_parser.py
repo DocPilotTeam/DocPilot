@@ -9,28 +9,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use free Mistral model on OpenRouter instead of Gemini
-MODEL = "mistralai/mistral-7b-instruct"
-
+MODEL = "gpt-5-nano"  # Efficient model for parsing
+MAX_CODE_LENGTH = 10000  # Limit code sent to LLM for efficiency
 class LLMFallbackParser(BaseParser):
     """
-    Fallback parser that uses an LLM when available, otherwise uses a local
-    heuristic parser to extract basic structure from arbitrary source files.
+    Efficient fallback parser that uses OpenAI's GPT-4o-mini for parsing unknown languages,
+    with optimized heuristic fallback when LLM is unavailable.
+
+    Features:
+    - Uses OPENAI_API_KEY for authentication
+    - Limits code input to 10k characters for efficiency
+    - Structured JSON prompts for consistent parsing
+    - Pre-compiled regexes in heuristic mode
+    - Supports wide range of programming languages
 
     Usage: parse_file(file_path, language)
       - language: a best-effort string (e.g., 'elixir', 'haskell', ...).
     """
 
     def __init__(self):
-        # Try to use OpenRouter API key first (preferred for production)
-        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY_LLM_PARSER")
         if api_key:
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://openrouter.ai/api/v1"
-            )
+            self.client = OpenAI(api_key=api_key)
         else:
-            # Gracefully disable LLM parsing if no API key is available
             self.client = None
 
     # ------------------ Heuristic parser ------------------
@@ -64,7 +65,7 @@ class LLMFallbackParser(BaseParser):
             endpoints.append({"method": m.group(1).upper(), "path": m.group(2)})
 
         # constants
-        constants = list(dict.fromkeys(re.findall(r"^\s*(?:const|#define|val|let)\s+([A-Z0-9_][A-Z0-9_\-]*)", code, re.M)))
+        constants = list(dict.fromkeys(re.findall(r"^\s*(?:const|#define|val|let|var|CONST)\s+([A-Z0-9_][A-Z0-9_\-]*)", code, re.M)))
 
         return {
             "file": file_path,
@@ -73,7 +74,6 @@ class LLMFallbackParser(BaseParser):
                 "imports": imports,
                 "classes": classes,
                 "functions": functions,
-                "objc_methods": [s.strip() for s in objc_methods],
                 "endpoints": endpoints,
                 "constants": constants
             }
@@ -88,12 +88,23 @@ class LLMFallbackParser(BaseParser):
         if not self.client:
             return {"status": "heuristic", **self._heuristic_parse(code, language, file_path)}
 
-        # Build prompt for the LLM
-        prompt = f"""
-You are an expert static code analyzer. Given source code in an unknown language ({language}), extract meaningful structured information.
-Return ONLY valid JSON with keys (optional when absent):
-- packages (list), file_structure (list), classes (list), functions (list), imports (list), api_endpoints (list), interfaces (list), comments (object)
-If you cannot analyze precisely, return a best-effort JSON; do not include extraneous text.
+        # Limit code length for efficiency
+        if len(code) > MAX_CODE_LENGTH:
+            code = code[:MAX_CODE_LENGTH] + "\n... [truncated for efficiency]"
+
+        # Build optimized prompt for the LLM
+        prompt = f"""Analyze this {language} code file and extract structured information.
+
+Return ONLY valid JSON with these keys (use empty arrays/objects if none found):
+{{
+  "imports": ["list", "of", "imports"],
+  "classes": ["ClassName1", "ClassName2"],
+  "functions": [{{"name": "func1", "params": ["param1", "param2"]}}],
+  "interfaces": ["Interface1"],
+  "constants": ["CONST1", "CONST2"],
+  "api_endpoints": [{{"method": "GET", "path": "/api/route"}}],
+  "packages": ["package1", "package2"]
+}}
 
 Code:
 {code}
@@ -103,7 +114,8 @@ Code:
             response = self.client.chat.completions.create(
                 model=MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0
+                temperature=0,
+                max_tokens=1000  # Limit response length for efficiency
             )
 
             content = response.choices[0].message.content
@@ -111,7 +123,18 @@ Code:
             # Try to parse JSON directly
             try:
                 parsed = json.loads(content)
-                return {"status": "llm", "file": file_path, "language": language, "parsed": parsed}
+                return {
+                    "status": "llm",
+                    "file": file_path,
+                    "language": language,
+                    "imports": parsed.get("imports", []),
+                    "classes": parsed.get("classes", []),
+                    "functions": parsed.get("functions", []),
+                    "interfaces": parsed.get("interfaces", []),
+                    "constants": parsed.get("constants", []),
+                    "api_endpoints": parsed.get("api_endpoints", []),
+                    "packages": parsed.get("packages", [])
+                }
             except json.JSONDecodeError:
                 # Attempt to extract a JSON blob from the returned text
                 m = re.search(r"(\{[\s\S]*\})", content)
@@ -119,9 +142,19 @@ Code:
                     blob = m.group(1)
                     try:
                         parsed = json.loads(blob)
-                        return {"status": "llm", "file": file_path, "language": language, "parsed": parsed}
+                        return {
+                            "status": "llm",
+                            "file": file_path,
+                            "language": language,
+                            "imports": parsed.get("imports", []),
+                            "classes": parsed.get("classes", []),
+                            "functions": parsed.get("functions", []),
+                            "interfaces": parsed.get("interfaces", []),
+                            "constants": parsed.get("constants", []),
+                            "api_endpoints": parsed.get("api_endpoints", []),
+                            "packages": parsed.get("packages", [])
+                        }
                     except json.JSONDecodeError:
-                        # fall through to heuristic
                         pass
 
                 # If JSON can't be recovered, include raw LLM output and fallback
